@@ -145,8 +145,8 @@ impl MerkleTree {
     ) -> Option<Vec<ProofListItem>> {
         let mut current_node = Some(Rc::new(self.root.clone()));
 
-        let file_contents = &files.get(file_name)?;
-        let target_hash = Sha256::digest(file_contents).to_vec();
+        let file_contents = files.get(file_name)?;
+        let target_hash: Vec<u8> = Sha256::digest(file_contents).to_vec();
         let mut proof_list: Vec<ProofListItem> = Vec::new();
 
         while let Some(ref node) = current_node {
@@ -228,7 +228,10 @@ impl MerkleTree {
 
 #[cfg(test)]
 mod test {
-    use crate::merkle_tree::{MerkleTree, NodeOrder};
+    use crate::{
+        merkle_tree::{MerkleTree, NodeOrder},
+        utils,
+    };
     use sha2::{Digest, Sha256};
     use std::collections::BTreeMap;
 
@@ -285,5 +288,78 @@ mod test {
             .find_target_relative_to_node(&merkle_tree.root.clone().right.unwrap(), &target_hash);
 
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn should_accept_correct_proof() {
+        let (merkle_tree, files) = setup_test();
+
+        match merkle_tree.generate_merkle_proof("file1.txt", &files) {
+            Some(proof_list) => {
+                assert!(utils::verify_merkle_proof(
+                    proof_list,
+                    merkle_tree.get_root_hash()
+                ));
+            }
+            None => {
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn should_reject_invalid_proof() {
+        let (merkle_tree, files) = setup_test();
+
+        let modified_files: BTreeMap<String, Vec<u8>> = vec![
+            (
+                "file1.txt".to_string(),
+                b"Modified File 1 contents".to_vec(),
+            ),
+            (
+                "file2.txt".to_string(),
+                b"Modified File 2 contents".to_vec(),
+            ),
+            (
+                "file3.txt".to_string(),
+                b"Modified File 3 contents".to_vec(),
+            ),
+            (
+                "file4.txt".to_string(),
+                b"Modified File 4 contents".to_vec(),
+            ),
+            (
+                "file5.txt".to_string(),
+                b"Modified File 5 contents".to_vec(),
+            ),
+            (
+                "file6.txt".to_string(),
+                b"Modified File 6 contents".to_vec(),
+            ),
+            (
+                "file7.txt".to_string(),
+                b"Modified File 7 contents".to_vec(),
+            ),
+            (
+                "file8.txt".to_string(),
+                b"Modified File 8 contents".to_vec(),
+            ),
+        ]
+        .into_iter()
+        .collect();
+
+        let modified_merkle_tree = MerkleTree::new(&modified_files);
+
+        match modified_merkle_tree.generate_merkle_proof("file1.txt", &modified_files) {
+            Some(proof_list) => {
+                assert!(!utils::verify_merkle_proof(
+                    proof_list,
+                    merkle_tree.get_root_hash()
+                ));
+            }
+            None => {
+                assert!(false);
+            }
+        }
     }
 }
