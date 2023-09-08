@@ -50,6 +50,8 @@ pub struct MerkleTree {
 use hex;
 use std::fmt;
 
+use crate::utils;
+
 impl fmt::Display for MerkleNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Helper function to recursively print nodes with indentation
@@ -88,6 +90,18 @@ impl MerkleTree {
         for file in files {
             nodes.push(MerkleNode::new(file.1));
         }
+
+        // Balance tree
+        if !nodes.len().is_power_of_two() {
+            let last_item = nodes.last().unwrap().clone();
+
+            let times = utils::closest_bigger_power_of_two(nodes.len() as u32) - nodes.len() as u32;
+
+            for _ in 0..times {
+                nodes.push(last_item.clone());
+            }
+        }
+
         while nodes.len() > 1 {
             let mut next_level = Vec::new();
             while let Some(left) = nodes.pop() {
