@@ -42,4 +42,6 @@ fn main() {
     .collect();
 
     let merkle_tree = MerkleTree::new(&files);
+
+    println!("{}", merkle_tree);
 }

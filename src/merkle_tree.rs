@@ -47,6 +47,41 @@ pub struct MerkleTree {
     pub root: MerkleNode,
 }
 
+use hex;
+use std::fmt;
+
+impl fmt::Display for MerkleNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Helper function to recursively print nodes with indentation
+        fn print_node(node: &MerkleNode, f: &mut fmt::Formatter<'_>, depth: usize) -> fmt::Result {
+            // Convert the first few bytes of the hash to a hex string for brevity
+            let short_hash = hex::encode(&node.hash[0..3]);
+
+            // Recursively print left child first
+            if let Some(left) = &node.left {
+                print_node(left, f, depth + 1)?;
+            }
+
+            // Print the current node's hash with proper indentation
+            writeln!(f, "{}{}", "        ".repeat(depth), short_hash)?;
+
+            // Recursively print right child
+            if let Some(right) = &node.right {
+                print_node(right, f, depth + 1)?;
+            }
+            Ok(())
+        }
+
+        print_node(self, f, 0)
+    }
+}
+
+impl fmt::Display for MerkleTree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.root)
+    }
+}
+
 impl MerkleTree {
     pub fn new(files: &BTreeMap<String, Vec<u8>>) -> Self {
         let mut nodes = Vec::new();
