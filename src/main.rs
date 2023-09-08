@@ -46,16 +46,17 @@ fn main() {
 
     let merkle_tree = MerkleTree::new(&files);
 
-    println!("{}", merkle_tree);
+    println!("\n{}", merkle_tree);
 
-    let proof_list = merkle_tree
-        .generate_merkle_proof("file1.txt", &files)
-        .unwrap();
-
-    println!("proof_list: {:?}", proof_list);
-
-    println!(
-        "Is proof valid: {}",
-        merkle_tree.verify_merkle_proof(proof_list, merkle_tree.get_root_hash())
-    );
+    match merkle_tree.generate_merkle_proof("file1.txt", &files) {
+        Some(proof_list) => {
+            println!(
+                "proof is : {}",
+                utils::verify_merkle_proof(proof_list, merkle_tree.get_root_hash())
+            );
+        }
+        None => {
+            println!("Could not generate proof")
+        }
+    }
 }
