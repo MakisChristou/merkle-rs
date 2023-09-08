@@ -4,11 +4,11 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug)]
 pub struct MerkleNode {
     pub hash: Vec<u8>,
-    left: Option<Box<MerkleNode>>,
-    right: Option<Box<MerkleNode>>,
+    pub left: Option<Box<MerkleNode>>,
+    pub right: Option<Box<MerkleNode>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum NodeOrder {
     Right,
     Left,
@@ -162,5 +162,67 @@ impl MerkleTree {
             }
             None => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::merkle_tree::{MerkleTree, NodeOrder};
+    use sha2::{Digest, Sha256};
+    use std::collections::BTreeMap;
+
+    fn setup_test() -> (MerkleTree, BTreeMap<String, Vec<u8>>) {
+        let files: BTreeMap<String, Vec<u8>> = vec![
+            ("file1.txt".to_string(), b"File 1 contents".to_vec()),
+            ("file2.txt".to_string(), b"File 2 contents".to_vec()),
+            ("file3.txt".to_string(), b"File 3 contents".to_vec()),
+            ("file4.txt".to_string(), b"File 4 contents".to_vec()),
+            ("file5.txt".to_string(), b"File 5 contents".to_vec()),
+            ("file6.txt".to_string(), b"File 6 contents".to_vec()),
+            ("file7.txt".to_string(), b"File 7 contents".to_vec()),
+            ("file8.txt".to_string(), b"File 8 contents".to_vec()),
+        ]
+        .into_iter()
+        .collect();
+
+        let merkle_tree = MerkleTree::new(&files);
+
+        (merkle_tree, files)
+    }
+
+    #[test]
+    fn should_find_left_target_relative_to_node() {
+        let (merkle_tree, files) = setup_test();
+
+        let target_hash = Sha256::digest(&files["file8.txt"]).to_vec();
+
+        let result =
+            merkle_tree.find_target_relative_to_node(&merkle_tree.root.clone(), &target_hash);
+
+        assert_eq!(result, Some(NodeOrder::Left));
+    }
+
+    #[test]
+    fn should_find_right_target_relative_to_node() {
+        let (merkle_tree, files) = setup_test();
+
+        let target_hash = Sha256::digest(&files["file3.txt"]).to_vec();
+
+        let result =
+            merkle_tree.find_target_relative_to_node(&merkle_tree.root.clone(), &target_hash);
+
+        assert_eq!(result, Some(NodeOrder::Right));
+    }
+
+    #[test]
+    fn should_not_find_target_if_not_exist() {
+        let (merkle_tree, files) = setup_test();
+
+        let target_hash = Sha256::digest(&files["file8.txt"]).to_vec();
+
+        let result = merkle_tree
+            .find_target_relative_to_node(&merkle_tree.root.clone().right.unwrap(), &target_hash);
+
+        assert_eq!(result, None);
     }
 }

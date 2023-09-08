@@ -54,7 +54,8 @@ fn main() {
     println!("target_hash: {}", hex::encode(&target_hash));
 
     // Call the find_target_relative_to_node function
-    let result = merkle_tree.find_target_relative_to_node(&merkle_tree.root, &target_hash);
+    let result = merkle_tree
+        .find_target_relative_to_node(&merkle_tree.root.right.clone().unwrap(), &target_hash);
 
     // Print the result
     match result {
