@@ -48,19 +48,14 @@ fn main() {
 
     println!("{}", merkle_tree);
 
-    // Get the hash of a specific file (e.g., "file1") to use as the target
-    let target_hash = Sha256::digest(&files["file8.txt"]).to_vec();
+    let proof_list = merkle_tree
+        .generate_merkle_proof("file1.txt", &files)
+        .unwrap();
 
-    println!("target_hash: {}", hex::encode(&target_hash));
+    println!("proof_list: {:?}", proof_list);
 
-    // Call the find_target_relative_to_node function
-    let result = merkle_tree
-        .find_target_relative_to_node(&merkle_tree.root.right.clone().unwrap(), &target_hash);
-
-    // Print the result
-    match result {
-        Some(NodeOrder::Left) => println!("The target is in the left subtree of the root."),
-        Some(NodeOrder::Right) => println!("The target is in the right subtree of the root."),
-        None => println!("The target is not a descendant of the root."),
-    }
+    println!(
+        "Is proof valid: {}",
+        merkle_tree.verify_merkle_proof(proof_list, merkle_tree.get_root_hash())
+    );
 }

@@ -1,11 +1,11 @@
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub struct MerkleNode {
     pub hash: Vec<u8>,
-    pub left: Option<Box<MerkleNode>>,
-    pub right: Option<Box<MerkleNode>>,
+    pub left: Option<Rc<MerkleNode>>,
+    pub right: Option<Rc<MerkleNode>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -14,10 +14,27 @@ pub enum NodeOrder {
     Left,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ProofListItem {
     hash: Vec<u8>,
     order: Option<NodeOrder>,
+}
+
+impl ProofListItem {
+    pub fn new(hash: Vec<u8>, order: Option<NodeOrder>) -> Self {
+        ProofListItem { hash, order }
+    }
+}
+
+impl fmt::Debug for ProofListItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let hash_str = hex::encode(&self.hash[0..3]);
+        match &self.order {
+            Some(NodeOrder::Right) => write!(f, "h: {} Right", hash_str),
+            Some(NodeOrder::Left) => write!(f, "h: {} Left", hash_str),
+            None => write!(f, "h: {}", hash_str),
+        }
+    }
 }
 
 impl MerkleNode {
@@ -35,8 +52,8 @@ impl MerkleNode {
         let hash = Sha256::digest(&combined).to_vec();
         MerkleNode {
             hash,
-            left: Some(Box::new(left.clone())),
-            right: Some(Box::new(right.clone())),
+            left: Some(Rc::new(left.clone())),
+            right: Some(Rc::new(right.clone())),
         }
     }
 }
@@ -123,10 +140,35 @@ impl MerkleTree {
 
     pub fn verify_merkle_proof(
         &self,
-        proof_list: Vec<ProofListItem>,
-        markle_root: &Vec<u8>,
+        mut proof_list: Vec<ProofListItem>,
+        markle_root: Vec<u8>,
     ) -> bool {
-        todo!()
+        if proof_list.len() < 2 {
+            return false;
+        }
+
+        while proof_list.len() != 1 {
+            let h1 = proof_list.pop().unwrap();
+            let h2 = proof_list.pop().unwrap();
+
+            match h2.order {
+                Some(NodeOrder::Left) => {
+                    let combined = [&h2.hash[..], &h1.hash[..]].concat();
+                    let hash = Sha256::digest(&combined).to_vec();
+                    proof_list.push(ProofListItem::new(hash, None));
+                }
+                Some(NodeOrder::Right) => {
+                    let combined = [&h1.hash[..], &h2.hash[..]].concat();
+                    let hash = Sha256::digest(&combined).to_vec();
+                    proof_list.push(ProofListItem::new(hash, None));
+                }
+                None => {
+                    panic!("Should not be None");
+                }
+            }
+        }
+
+        return markle_root == proof_list.pop().unwrap().hash;
     }
 
     pub fn generate_merkle_proof(
@@ -134,7 +176,60 @@ impl MerkleTree {
         file_name: &str,
         files: &BTreeMap<String, Vec<u8>>,
     ) -> Option<Vec<ProofListItem>> {
-        todo!()
+        let mut current_node = Some(Rc::new(self.root.clone()));
+
+        let target_hash = Sha256::digest(&files[file_name]).to_vec();
+        let mut proof_list: Vec<ProofListItem> = Vec::new();
+
+        println!(" target_hash: {}", hex::encode(&target_hash));
+
+        while let Some(ref node) = current_node {
+            println!("current_node: {}", hex::encode(&node.hash));
+
+            match self.find_target_relative_to_node(node.as_ref(), &target_hash) {
+                Some(NodeOrder::Right) => {
+                    if let Some(left) = &node.left {
+                        if let Some(right) = &node.right {
+                            if left.hash == target_hash || right.hash == target_hash {
+                                proof_list.push(ProofListItem::new(
+                                    right.hash.clone(),
+                                    Some(NodeOrder::Right),
+                                ));
+                            }
+
+                            proof_list
+                                .push(ProofListItem::new(left.hash.clone(), Some(NodeOrder::Left)));
+                            current_node = Some(Rc::clone(right));
+                        }
+                    }
+                }
+                Some(NodeOrder::Left) => {
+                    if let Some(right) = &node.right {
+                        if let Some(left) = &node.left {
+                            if left.hash == target_hash || right.hash == target_hash {
+                                proof_list.push(ProofListItem::new(
+                                    left.hash.clone(),
+                                    Some(NodeOrder::Left),
+                                ));
+                            }
+
+                            proof_list.push(ProofListItem::new(
+                                right.hash.clone(),
+                                Some(NodeOrder::Right),
+                            ));
+                            current_node = Some(Rc::clone(left));
+                        }
+                    }
+                }
+                None => break,
+            }
+        }
+
+        if proof_list.is_empty() {
+            return None;
+        }
+
+        Some(proof_list)
     }
 
     pub fn find_target_relative_to_node(
@@ -151,7 +246,7 @@ impl MerkleTree {
         }
     }
 
-    fn is_node_in_subtree(&self, node: &Option<Box<MerkleNode>>, target_hash: &Vec<u8>) -> bool {
+    fn is_node_in_subtree(&self, node: &Option<Rc<MerkleNode>>, target_hash: &Vec<u8>) -> bool {
         match node {
             Some(n) => {
                 if &n.hash == target_hash {
