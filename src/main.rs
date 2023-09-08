@@ -4,6 +4,9 @@ mod utils;
 use std::collections::BTreeMap;
 
 use merkle_tree::MerkleTree;
+use sha2::{Digest, Sha256};
+
+use crate::merkle_tree::NodeOrder;
 
 struct Client {
     root_hash: Vec<u8>,
@@ -44,4 +47,19 @@ fn main() {
     let merkle_tree = MerkleTree::new(&files);
 
     println!("{}", merkle_tree);
+
+    // Get the hash of a specific file (e.g., "file1") to use as the target
+    let target_hash = Sha256::digest(&files["file8.txt"]).to_vec();
+
+    println!("target_hash: {}", hex::encode(&target_hash));
+
+    // Call the find_target_relative_to_node function
+    let result = merkle_tree.find_target_relative_to_node(&merkle_tree.root, &target_hash);
+
+    // Print the result
+    match result {
+        Some(NodeOrder::Left) => println!("The target is in the left subtree of the root."),
+        Some(NodeOrder::Right) => println!("The target is in the right subtree of the root."),
+        None => println!("The target is not a descendant of the root."),
+    }
 }

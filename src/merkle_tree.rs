@@ -12,13 +12,12 @@ pub struct MerkleNode {
 pub enum NodeOrder {
     Right,
     Left,
-    Unknown,
 }
 
 #[derive(Clone, Debug)]
 pub struct ProofListItem {
     hash: Vec<u8>,
-    order: NodeOrder,
+    order: Option<NodeOrder>,
 }
 
 impl MerkleNode {
@@ -136,5 +135,32 @@ impl MerkleTree {
         files: &BTreeMap<String, Vec<u8>>,
     ) -> Option<Vec<ProofListItem>> {
         todo!()
+    }
+
+    pub fn find_target_relative_to_node(
+        &self,
+        node: &MerkleNode,
+        target_hash: &Vec<u8>,
+    ) -> Option<NodeOrder> {
+        if self.is_node_in_subtree(&node.left, target_hash) {
+            return Some(NodeOrder::Left);
+        } else if self.is_node_in_subtree(&node.right, target_hash) {
+            return Some(NodeOrder::Right);
+        } else {
+            return None; // The target is not a descendant of the given node.
+        }
+    }
+
+    fn is_node_in_subtree(&self, node: &Option<Box<MerkleNode>>, target_hash: &Vec<u8>) -> bool {
+        match node {
+            Some(n) => {
+                if &n.hash == target_hash {
+                    return true;
+                }
+                self.is_node_in_subtree(&n.left, target_hash)
+                    || self.is_node_in_subtree(&n.right, target_hash)
+            }
+            None => false,
+        }
     }
 }
