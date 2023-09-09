@@ -187,11 +187,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Requesting file from server");
 
-    match merkle_client.request_file("file1.txt").await {
+    let file_to_ask_for = "file1.txt";
+
+    match merkle_client.request_file(file_to_ask_for).await {
         Ok(server_response) => {
             if utils::verify_merkle_proof(
                 server_response.merkle_proof,
                 merkle_client.merkle_root.unwrap(),
+                server_response.content,
             ) {
                 println!("Server proof is valid!");
             } else {

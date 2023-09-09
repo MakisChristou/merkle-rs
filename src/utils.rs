@@ -37,8 +37,27 @@ pub fn closest_bigger_power_of_two(n: u32) -> u32 {
     2u32.pow(ceil_value)
 }
 
-pub fn verify_merkle_proof(mut proof_list: Vec<ProofListItem>, markle_root: Vec<u8>) -> bool {
+fn contains_hash(proof_list: &Vec<ProofListItem>, target_hash: &Vec<u8>) -> bool {
+    for item in proof_list {
+        if &item.hash == target_hash {
+            return true;
+        }
+    }
+    false
+}
+
+pub fn verify_merkle_proof(
+    mut proof_list: Vec<ProofListItem>,
+    markle_root: Vec<u8>,
+    file_contents: Vec<u8>,
+) -> bool {
     if proof_list.len() < 2 {
+        return false;
+    }
+
+    let hashed_file_contents = Sha256::digest(&file_contents).to_vec();
+
+    if !contains_hash(&proof_list, &hashed_file_contents) {
         return false;
     }
 

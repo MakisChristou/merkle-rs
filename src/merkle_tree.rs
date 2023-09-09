@@ -293,7 +293,8 @@ mod test {
             Some(proof_list) => {
                 assert!(utils::verify_merkle_proof(
                     proof_list,
-                    merkle_tree.get_root_hash()
+                    merkle_tree.get_root_hash(),
+                    files["file1.txt"].clone(),
                 ));
             }
             None => {
@@ -349,7 +350,8 @@ mod test {
             Some(proof_list) => {
                 assert!(!utils::verify_merkle_proof(
                     proof_list,
-                    merkle_tree.get_root_hash()
+                    merkle_tree.get_root_hash(),
+                    files["file1.txt"].clone(),
                 ));
             }
             None => {
