@@ -5,6 +5,6 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     /// Path where client files are located
-    #[arg(short, long, default_value_t = String::from("target_files"))]
+    #[arg(short, long, default_value_t = String::from("server_files"))]
     pub path: String,
 }

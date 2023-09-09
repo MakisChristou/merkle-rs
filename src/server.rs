@@ -13,8 +13,8 @@ use std::{
     io::Write,
 };
 
-mod args;
 mod merkle_tree;
+mod server_args;
 mod utils;
 
 use crate::merkle_tree::MerkleTree;
