@@ -1,7 +1,10 @@
 use crate::{client_args::Args, merkle_tree::MerkleTree};
 use base64;
 use clap::Parser;
+use hyper::StatusCode;
+use merkle_tree::ProofListItem;
 use reqwest;
+use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self, ErrorKind},
@@ -13,12 +16,29 @@ struct UploadPayload {
     content: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct FileResponse {
+    filename: String,
+    content: Vec<u8>,
+    merkle_proof: Vec<ProofListItem>,
+}
+
+impl FileResponse {
+    pub fn new(filename: String, content: Vec<u8>, merkle_proof: Vec<ProofListItem>) -> Self {
+        FileResponse {
+            filename,
+            content,
+            merkle_proof,
+        }
+    }
+}
+
 mod client_args;
 mod merkle_tree;
 mod utils;
 
 pub struct MerkleClient {
-    root_hash: Option<Vec<u8>>,
+    pub merkle_root: Option<Vec<u8>>,
     server_url: String,
     reqwest_client: reqwest::Client,
     client_files: String,
@@ -33,11 +53,30 @@ impl MerkleClient {
         merkle_root_path: String,
     ) -> Self {
         MerkleClient {
-            root_hash: None,
+            merkle_root: None,
             server_url: server_url.to_owned(),
             reqwest_client,
             client_files,
             merkle_root_path,
+        }
+    }
+    pub async fn request_file(
+        &self,
+        filename: &str,
+    ) -> Result<FileResponse, Box<dyn std::error::Error>> {
+        let url = format!("{}/file/{}", &self.server_url, filename);
+
+        let response = self.reqwest_client.get(&url).send().await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let file_response: FileResponse = response.json().await?;
+                Ok(file_response)
+            }
+            _ => Err(Box::new(io::Error::new(
+                io::ErrorKind::Other,
+                "Failed to retrieve file from server",
+            ))),
         }
     }
 
@@ -61,7 +100,7 @@ impl MerkleClient {
     }
 
     pub fn write_merkle_root_to_disk(&self) -> io::Result<()> {
-        match self.root_hash.clone() {
+        match self.merkle_root.clone() {
             Some(merkle_root) => fs::write(self.merkle_root_path.clone(), merkle_root),
             None => {
                 eprintln!("Client has no merkle root to store");
@@ -90,7 +129,7 @@ impl MerkleClient {
     pub fn compute_merkle_root_from_files(&mut self) {
         let files = utils::parse_files(&self.client_files);
         let merkle_tree = MerkleTree::new(&files);
-        self.root_hash = Some(merkle_tree.root.hash)
+        self.merkle_root = Some(merkle_tree.root.hash)
     }
 
     async fn upload_file(
@@ -145,6 +184,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     merkle_client.compute_merkle_root_from_files();
     merkle_client.write_merkle_root_to_disk();
     merkle_client.delete_local_client_files();
+
+    println!("Requesting file from server");
+
+    match merkle_client.request_file("file1.txt").await {
+        Ok(server_response) => {
+            if utils::verify_merkle_proof(
+                server_response.merkle_proof,
+                merkle_client.merkle_root.unwrap(),
+            ) {
+                println!("Server proof is valid!");
+            } else {
+                println!("Server proof is invalid!");
+            }
+        }
+        Err(e) => {
+            eprint!("Could not get file from server {}", e);
+        }
+    }
 
     Ok(())
 }

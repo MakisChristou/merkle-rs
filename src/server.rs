@@ -95,11 +95,12 @@ async fn upload(Json(body): Json<UploadPayload>) -> Result<Json<UploadResponse>,
     }))
 }
 
-async fn get_file(Path(filename): Path<String>) -> Result<Json<FileResponse>, StatusCode> {
-    let path = &"server_files";
+async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>, StatusCode> {
+    let file_path = format!("server_files/{}", filename);
 
-    // Read the file's content
-    let content = match fs::read(&path) {
+    let path = "server_files";
+
+    let content = match fs::read(&file_path) {
         Ok(content) => content,
         Err(e) => {
             eprintln!("Failed to read file {}: {:?}", filename, e);
@@ -107,11 +108,10 @@ async fn get_file(Path(filename): Path<String>) -> Result<Json<FileResponse>, St
         }
     };
 
-    let files = utils::parse_files(path);
-
+    let files = utils::parse_files(&path);
     let merkle_tree = MerkleTree::new(&files);
 
-    match merkle_tree.generate_merkle_proof("backup.db", &files) {
+    match merkle_tree.generate_merkle_proof(&filename, &files) {
         Some(proof_list) => Ok(Json(FileResponse::new(filename, content, proof_list))),
         None => {
             panic!("Server could not generate proof")
@@ -123,7 +123,7 @@ async fn get_file(Path(filename): Path<String>) -> Result<Json<FileResponse>, St
 async fn main() {
     let app = Router::new()
         .route("/upload", post(upload))
-        .route("/file/:filename", get(get_file));
+        .route("/file/:filename", get(request_file));
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("Listening on {}", addr);
