@@ -8,10 +8,57 @@ A Merkle tree implementation in Rust 🌲🦀!
 # How it works
 
 ## Merkle Tree
+A Merkle Tree is a data structure that is used to efficienlty summarize a set of data (usually transactions in a blockchain). It is a binary tree where the leaf nodes contain the hashes of the files/transactions that we want to "summarize" and the parent nodes are computed by grouping leaf nodes into two and concatenating their hashes, rehashing them to get a combined hash. That hash is the value of the parent node. We do this recursively until we reach the root node which is the "summary" of the set of data. This enables an efficient way to check if a piece of data that you have the contents of is in this larger set of data (i.e. block in a blockchain context). The bread and butter of Merkle Trees is their efficient Proof generation and verification algoerithms. We will talk about them in the next sections.
 
 ## Merkle Proof Generation Algorithm (server)
+The Merkle Proof generation algorithm can be found in the `generate_merkle_proof` method of `MerkleTree`. The idea behind the algorithm is to start from the root node (`current_node` = `root_of_tree`) of the tree and traverse downards. While doing so we keep a `proof_list` which is a stack that contains the hashes of the required nodes for the proof, alongside their order in the tree (left or right). We set the `current_node`  to the left child if the `target_hash` is found under the left subtree and we push the opposite (i.e. right child) in the `proof_list` alongside its order which in this case is right. We do the exact opposite if the `target_hash` is found in the opposite subtree. We continue this operation until we reach the lead nodes of the tree. A simplified pseudocode of the algorithm can be found below:
+
+```pseudocode
+FUNCTION generate_merkle_proof(target_hash):
+    DECLARE proof_list AS EMPTY STACK
+    SET current_node TO root_of_tree
+
+    WHILE current_node IS NOT A LEAF:
+        IF target_hash IS IN LEFT SUBTREE OF current_node:
+            PUSH (current_node.RIGHT_CHILD.HASH, "right") TO proof_list
+            SET current_node TO current_node.LEFT_CHILD
+        ELSE:
+            PUSH (current_node.LEFT_CHILD.HASH, "left") TO proof_list
+            SET current_node TO current_node.RIGHT_CHILD
+
+    RETURN proof_list
+```
+
+The `proof_list` alongside the contents of the file are what the verification algorithm needs to check if the given file is in the Merkle Tree.
 
 ## Merkle Proof Verification Algorithm (client)
+I have chosen to implement the verification algorithm as a helper method in the `utils` module since it should be independent of the actual tree. Spefically the implementation is in the `utils::verify_merkle_proof` function. The verification algorithm is relatively simpler. Firstly there are some quick ways to dismiss an invalid proof such as checking if the `proof_list` is empty or below a given size, and then checking if the hashed contents of the file are included in any of the nodes in the `proof_list`. If that is the case, all the verifier has to do is pop items from the `proof_list`, specificslly 2 at a time, concatenate their hashes in the correct order, which is included in each item in the proof list and generate a new node which is to be pushed back to the stack. It then repeats this process until the stack size is 1. If the result is equal to the merkle tree's root hash then the verification is sucessful.
+
+```pseudocode
+FUNCTION generate_merkle_proof(proof_list, hashed_file_contents, merkle_root):
+    IF proof_list IS EMPTY OR SIZE OF proof_list IS BELOW A GIVEN THRESHOLD:
+        RETURN FALSE
+
+    IF hashed_file_contents IS NOT IN ANY NODE OF proof_list:
+        RETURN FALSE
+
+    WHILE SIZE OF proof_list > 1:
+        item1 = POP proof_list
+        item2 = POP proof_list
+
+        IF item1.ORDER IS "left":
+            concatenated_hash = HASH(item1.HASH + item2.HASH)
+        ELSE:
+            concatenated_hash = HASH(item2.HASH + item1.HASH)
+
+        PUSH concatenated_hash TO proof_list
+
+    IF SIZE OF proof_list IS 1 AND proof_list.TOP IS EQUAL TO merkle_root:
+        RETURN TRUE
+    ELSE:
+        RETURN FALSE
+```
+
 
 # How to run
 Building both the client and the server
