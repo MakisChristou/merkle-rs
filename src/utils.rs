@@ -1,13 +1,9 @@
-use std::collections::BTreeMap;
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::Read;
 
 use crate::merkle_tree::{NodeOrder, ProofListItem};
-
-pub fn hash_file(path: &str) -> Vec<u8> {
-    todo!()
-}
 
 pub fn parse_files(path: &str) -> BTreeMap<String, Vec<u8>> {
     let mut files_map = BTreeMap::new();
@@ -24,7 +20,8 @@ pub fn parse_files(path: &str) -> BTreeMap<String, Vec<u8>> {
                         // Read the file contents.
                         let mut file = fs::File::open(&path).expect("Failed to open file");
                         let mut content = Vec::new();
-                        file.read_to_end(&mut content).expect("Failed to read file contents");
+                        file.read_to_end(&mut content)
+                            .expect("Failed to read file contents");
 
                         // Insert into the BTreeMap.
                         files_map.insert(file_name_str.to_string(), content);
@@ -36,7 +33,6 @@ pub fn parse_files(path: &str) -> BTreeMap<String, Vec<u8>> {
 
     files_map
 }
-
 
 pub fn closest_bigger_power_of_two(n: u32) -> u32 {
     let log_value = (n as f64).log2();

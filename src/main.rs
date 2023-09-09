@@ -1,18 +1,14 @@
-mod client;
-mod merkle_tree;
-mod server;
-mod utils;
 mod args;
+mod merkle_tree;
+mod utils;
 
+use crate::args::Args;
 use clap::Parser;
 use merkle_tree::MerkleTree;
-use crate::args::Args;
 
 fn main() {
-
     let args = Args::parse();
 
-    
     let path = &args.path;
     let files = utils::parse_files(path);
 
