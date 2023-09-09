@@ -5,47 +5,19 @@ use axum::{
 };
 use base64;
 use hyper::StatusCode;
-use merkle_tree::ProofListItem;
-use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     fs::{self, create_dir_all, File},
     io::Write,
 };
 
+mod common;
 mod merkle_tree;
 mod server_args;
 mod utils;
 
+use crate::common::{FileResponse, UploadRequest, UploadResponse};
 use crate::merkle_tree::MerkleTree;
-
-#[derive(Serialize, Deserialize)]
-struct FileResponse {
-    filename: String,
-    content: Vec<u8>,
-    merkle_proof: Vec<ProofListItem>,
-}
-
-impl FileResponse {
-    pub fn new(filename: String, content: Vec<u8>, merkle_proof: Vec<ProofListItem>) -> Self {
-        FileResponse {
-            filename,
-            content,
-            merkle_proof,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct UploadPayload {
-    filename: String,
-    content: String,
-}
-
-#[derive(Deserialize, Serialize)]
-struct UploadResponse {
-    message: String,
-}
 
 pub struct MerkleServer {
     files_path: String,
@@ -64,7 +36,7 @@ impl MerkleServer {
     }
 }
 
-async fn upload(Json(body): Json<UploadPayload>) -> Result<Json<UploadResponse>, StatusCode> {
+async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>, StatusCode> {
     // Create the directory if it doesn't exist
     let path = std::path::Path::new("server_files");
     if !path.exists() {

@@ -2,40 +2,19 @@ use crate::{client_args::Args, merkle_tree::MerkleTree};
 use base64;
 use clap::Parser;
 use hyper::StatusCode;
-use merkle_tree::ProofListItem;
+
 use reqwest;
-use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{self, ErrorKind},
 };
 
-#[derive(serde::Serialize)]
-struct UploadPayload {
-    filename: String,
-    content: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct FileResponse {
-    filename: String,
-    content: Vec<u8>,
-    merkle_proof: Vec<ProofListItem>,
-}
-
-impl FileResponse {
-    pub fn new(filename: String, content: Vec<u8>, merkle_proof: Vec<ProofListItem>) -> Self {
-        FileResponse {
-            filename,
-            content,
-            merkle_proof,
-        }
-    }
-}
-
 mod client_args;
+mod common;
 mod merkle_tree;
 mod utils;
+
+use common::{FileResponse, UploadRequest};
 
 pub struct MerkleClient {
     pub merkle_root: Option<Vec<u8>>,
@@ -140,7 +119,7 @@ impl MerkleClient {
         let content = fs::read(&path)?;
         let base64_content = base64::encode(&content);
 
-        let payload = UploadPayload {
+        let payload = UploadRequest {
             filename: path.file_name().unwrap().to_string_lossy().into_owned(),
             content: base64_content,
         };
