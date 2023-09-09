@@ -66,8 +66,6 @@ pub struct MerkleTree {
 
 use std::fmt;
 
-use crate::utils;
-
 impl fmt::Display for MerkleNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Helper function to recursively print nodes with indentation

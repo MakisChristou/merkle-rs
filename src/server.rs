@@ -40,7 +40,7 @@ async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>,
     // Create the directory if it doesn't exist
     let path = std::path::Path::new("server_files");
     if !path.exists() {
-        if let Err(e) = create_dir_all(&path) {
+        if let Err(e) = create_dir_all(path) {
             eprintln!("Failed to create directory: {:?}", e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
@@ -57,7 +57,7 @@ async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>,
 
     // Save the file
     let file_path = path.join(&body.filename);
-    if let Err(e) = File::create(&file_path).and_then(|mut file| file.write_all(&content_bytes)) {
+    if let Err(e) = File::create(file_path).and_then(|mut file| file.write_all(&content_bytes)) {
         eprintln!("Failed to save file: {:?}", e);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -72,7 +72,7 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
 
     let path = "server_files";
 
-    let content = match fs::read(&file_path) {
+    let content = match fs::read(file_path) {
         Ok(content) => content,
         Err(e) => {
             eprintln!("Failed to read file {}: {:?}", filename, e);
@@ -80,7 +80,7 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
         }
     };
 
-    let files = utils::parse_files(&path);
+    let files = utils::parse_files(path);
     let merkle_tree = MerkleTree::new(&files);
 
     match merkle_tree.generate_merkle_proof(&filename, &files) {
