@@ -73,6 +73,12 @@ impl MerkleClient {
                         std::io::ErrorKind::Other,
                         "The directory is empty",
                     )));
+                } else if entries.len() < 2 {
+                    eprintln!("Not enough files to upload, must be > 2");
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Not enough files to upload, must be > 2",
+                    )));
                 }
 
                 let entries = fs::read_dir(client_files)?;
@@ -130,8 +136,11 @@ impl MerkleClient {
                 Ok(())
             }
             None => {
-                eprintln!("Client has no files");
-                Err(io::Error::new(ErrorKind::Other, "Client has no files"))
+                eprintln!("Client has no set directory path");
+                Err(io::Error::new(
+                    ErrorKind::Other,
+                    "Client has no set directory path",
+                ))
             }
         }
     }
@@ -154,10 +163,10 @@ impl MerkleClient {
                 }
             }
             None => {
-                println!("Cannot compute Merkle Proof, no files");
+                println!("Client has no set directory path");
                 Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    "Cannot compute Merkle Proof, no files",
+                    "Client has no set directory path",
                 )))
             }
         }
@@ -194,12 +203,11 @@ impl MerkleClient {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Welcome to merkle-rs client 🔑🦀!");
-
     let args = Args::parse_arguments();
 
     match &args.command {
         None => {
+            println!("Welcome to merkle-rs client 🔑🦀!");
             println!("Please give a valid command");
             println!("Run with --help to get the list of available commands");
         }
