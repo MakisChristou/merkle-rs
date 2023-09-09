@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, rc::Rc};
 
@@ -8,13 +9,13 @@ pub struct MerkleNode {
     pub right: Option<Rc<MerkleNode>>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum NodeOrder {
     Right,
     Left,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ProofListItem {
     pub hash: Vec<u8>,
     pub order: Option<NodeOrder>,
