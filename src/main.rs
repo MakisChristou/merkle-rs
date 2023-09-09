@@ -2,23 +2,25 @@ mod client;
 mod merkle_tree;
 mod server;
 mod utils;
+mod args;
 
+use clap::Parser;
 use merkle_tree::MerkleTree;
+use crate::args::Args;
 
 fn main() {
-    let files = (1..=8)
-        .map(|i| {
-            let file_name = format!("file{}.txt", i);
-            let file_content = format!("File {} contents", i).into_bytes();
-            (file_name, file_content)
-        })
-        .collect();
+
+    let args = Args::parse();
+
+    
+    let path = &args.path;
+    let files = utils::parse_files(path);
 
     let merkle_tree = MerkleTree::new(&files);
 
     println!("\n{}", merkle_tree);
 
-    match merkle_tree.generate_merkle_proof("file1.txt", &files) {
+    match merkle_tree.generate_merkle_proof("backup.db", &files) {
         Some(proof_list) => {
             println!(
                 "proof is : {}",
