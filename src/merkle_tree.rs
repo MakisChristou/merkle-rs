@@ -107,17 +107,6 @@ impl MerkleTree {
             nodes.push(MerkleNode::new(file.1));
         }
 
-        // Balance tree
-        if !nodes.len().is_power_of_two() {
-            let last_item = nodes.last().unwrap().clone();
-
-            let times = utils::closest_bigger_power_of_two(nodes.len() as u32) - nodes.len() as u32;
-
-            for _ in 0..times {
-                nodes.push(last_item.clone());
-            }
-        }
-
         while nodes.len() > 1 {
             let mut next_level = Vec::new();
             while let Some(left) = nodes.pop() {
