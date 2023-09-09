@@ -3,10 +3,9 @@ use axum::{
     handler::{get, post},
     Router,
 };
-use base64;
+use base64::{self, engine::general_purpose, Engine};
 use hyper::StatusCode;
 use std::{
-    collections::BTreeMap,
     fs::{self, create_dir_all, File},
     io::Write,
 };
@@ -19,23 +18,6 @@ mod utils;
 use crate::common::{FileResponse, UploadRequest, UploadResponse};
 use crate::merkle_tree::MerkleTree;
 
-pub struct MerkleServer {
-    files_path: String,
-    files: BTreeMap<String, Vec<u8>>,
-    merkle_tree: MerkleTree,
-}
-
-impl MerkleServer {
-    fn new(files_path: String, files: BTreeMap<String, Vec<u8>>) -> Self {
-        let merkle_tree = MerkleTree::new(&files);
-        MerkleServer {
-            files_path,
-            files,
-            merkle_tree,
-        }
-    }
-}
-
 async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>, StatusCode> {
     // Create the directory if it doesn't exist
     let path = std::path::Path::new("server_files");
@@ -47,7 +29,7 @@ async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>,
     }
 
     // Decode the base64 content
-    let content_bytes = match base64::decode(&body.content) {
+    let content_bytes = match general_purpose::STANDARD.decode(&body.content) {
         Ok(bytes) => bytes,
         Err(e) => {
             eprintln!("Failed to decode base64 content: {:?}", e);
@@ -86,7 +68,7 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
     match merkle_tree.generate_merkle_proof(&filename, &files) {
         Some(proof_list) => Ok(Json(FileResponse::new(filename, content, proof_list))),
         None => {
-            panic!("Server could not generate proof")
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
 }
@@ -98,6 +80,7 @@ async fn main() {
         .route("/file/:filename", get(request_file));
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Welcome to merkle-rs server 🔑🦀!");
     println!("Listening on {}", addr);
     hyper::Server::bind(&addr)
         .serve(app.into_make_service())

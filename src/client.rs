@@ -1,5 +1,5 @@
 use crate::{client_args::Args, merkle_tree::MerkleTree};
-use base64;
+use base64::{self, engine::general_purpose, Engine};
 use clap::Parser;
 use hyper::StatusCode;
 
@@ -116,8 +116,8 @@ impl MerkleClient {
         path: &std::path::Path,
         base_url: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let content = fs::read(&path)?;
-        let base64_content = base64::encode(&content);
+        let content = fs::read(path)?;
+        let base64_content = general_purpose::STANDARD.encode(&content);
 
         let payload = UploadRequest {
             filename: path.file_name().unwrap().to_string_lossy().into_owned(),
@@ -161,8 +161,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     merkle_client.compute_merkle_root_from_files();
-    merkle_client.write_merkle_root_to_disk();
-    merkle_client.delete_local_client_files();
+    if let Err(e) = merkle_client.write_merkle_root_to_disk() {
+        panic!("Failed to write merkle root to disk {}", e);
+    }
+
+    if let Err(e) = merkle_client.delete_local_client_files() {
+        panic!("Failed to delete client files {}", e);
+    }
 
     println!("Requesting file from server");
 
@@ -181,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         Err(e) => {
-            eprint!("Could not get file from server {}", e);
+            eprint!("{}", e);
         }
     }
 

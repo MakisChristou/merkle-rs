@@ -121,10 +121,12 @@ impl MerkleTree {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_root_hash(&self) -> Vec<u8> {
         self.root.hash.clone()
     }
 
+    #[allow(dead_code)]
     pub fn generate_merkle_proof(
         &self,
         file_name: &str,

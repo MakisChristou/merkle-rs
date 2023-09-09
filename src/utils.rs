@@ -31,12 +31,6 @@ pub fn parse_files(path: &str) -> BTreeMap<String, Vec<u8>> {
     files_map
 }
 
-pub fn closest_bigger_power_of_two(n: u32) -> u32 {
-    let log_value = (n as f64).log2();
-    let ceil_value = log_value.ceil() as u32;
-    2u32.pow(ceil_value)
-}
-
 fn contains_hash(proof_list: &Vec<ProofListItem>, target_hash: &Vec<u8>) -> bool {
     for item in proof_list {
         if &item.hash == target_hash {
@@ -46,6 +40,7 @@ fn contains_hash(proof_list: &Vec<ProofListItem>, target_hash: &Vec<u8>) -> bool
     false
 }
 
+#[allow(dead_code)]
 pub fn verify_merkle_proof(
     mut proof_list: Vec<ProofListItem>,
     markle_root: Vec<u8>,
