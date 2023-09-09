@@ -80,8 +80,10 @@ async fn main() {
         .route("/file/:filename", get(request_file));
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3000));
+
     println!("Welcome to merkle-rs server 🔑🦀!");
     println!("Listening on {}", addr);
+
     hyper::Server::bind(&addr)
         .serve(app.into_make_service())
         .await

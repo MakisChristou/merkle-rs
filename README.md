@@ -13,11 +13,36 @@ Running tests
 cargo t
 ```
 
+## Server
+
 Then we can start the server. This will start the server on port 3000 and with the default directory for server files which is `./server_files`. The server will listen on poret 3000 for 2 types of requests. A POST request for uploading a file and a GET request for asking for a file by name alongside the Merkle proof.
 
 ```bash
 cargo r --bin server
 ```
+
+## Client
+
+### Available Commands
+
+```bash
+$ cargo r --bin client -- --help
+A Merkle tree implementation for proving file integrity
+
+Usage: client [OPTIONS] [COMMAND]
+
+Commands:
+  upload   Uploads all files to the server
+  request  Request a file by name
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -f, --files-path <FILES_PATH>    Path where client files are located [default: client_files]
+  -m, --merkle-path <MERKLE_PATH>  Path where client computed merkle root is stored on disk [default: merkle.bin]
+  -h, --help                       Print help
+  -V, --version                    Print version
+```
+
 
 And then the client on another temrinal.
 

@@ -1,6 +1,8 @@
-use crate::{client_args::Args, merkle_tree::MerkleTree};
+use crate::{
+    client_args::{Args, Commands},
+    merkle_tree::MerkleTree,
+};
 use base64::{self, engine::general_purpose, Engine};
-use clap::Parser;
 use hyper::StatusCode;
 
 use reqwest;
@@ -20,7 +22,7 @@ pub struct MerkleClient {
     pub merkle_root: Option<Vec<u8>>,
     server_url: String,
     reqwest_client: reqwest::Client,
-    client_files: String,
+    client_files: Option<String>,
     merkle_root_path: String,
 }
 
@@ -28,7 +30,7 @@ impl MerkleClient {
     pub fn new(
         server_url: &str,
         reqwest_client: reqwest::Client,
-        client_files: String,
+        client_files: Option<String>,
         merkle_root_path: String,
     ) -> Self {
         MerkleClient {
@@ -60,18 +62,29 @@ impl MerkleClient {
     }
 
     pub async fn upload_all_files_to_server(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let base_url = format!("{}/upload", self.server_url);
-        let entries = fs::read_dir(self.client_files.clone())?;
+        match &self.client_files {
+            Some(client_files) => {
+                let base_url = format!("{}/upload", self.server_url);
+                let entries = fs::read_dir(client_files)?;
 
-        for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                MerkleClient::upload_file(&self.reqwest_client, &path, &base_url).await?;
+                for entry in entries {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.is_file() {
+                        MerkleClient::upload_file(&self.reqwest_client, &path, &base_url).await?;
+                    }
+                }
+
+                Ok(())
+            }
+            None => {
+                eprintln!("Client has no files to upload");
+                Err(Box::new(io::Error::new(
+                    io::ErrorKind::Other,
+                    "Client has no files to upload",
+                )))
             }
         }
-
-        Ok(())
     }
 
     pub fn read_merkle_root_from_disk(&self) -> io::Result<Vec<u8>> {
@@ -92,23 +105,38 @@ impl MerkleClient {
     }
 
     pub fn delete_local_client_files(&self) -> io::Result<()> {
-        let entries = fs::read_dir(&self.client_files)?;
+        match &self.client_files {
+            Some(client_files) => {
+                let entries = fs::read_dir(client_files)?;
 
-        for entry in entries {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                fs::remove_file(path)?;
+                for entry in entries {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.is_file() {
+                        fs::remove_file(path)?;
+                    }
+                }
+
+                Ok(())
+            }
+            None => {
+                eprintln!("Client has no files");
+                Err(io::Error::new(ErrorKind::Other, "Client has no files"))
             }
         }
-
-        Ok(())
     }
 
     pub fn compute_merkle_root_from_files(&mut self) {
-        let files = utils::parse_files(&self.client_files);
-        let merkle_tree = MerkleTree::new(&files);
-        self.merkle_root = Some(merkle_tree.root.hash)
+        match &self.client_files {
+            Some(client_files) => {
+                let files = utils::parse_files(client_files);
+                let merkle_tree = MerkleTree::new(&files);
+                self.merkle_root = Some(merkle_tree.root.hash);
+            }
+            None => {
+                println!("Cannot compute Merkle Proof, no files");
+            }
+        }
     }
 
     async fn upload_file(
@@ -142,51 +170,66 @@ impl MerkleClient {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
+    println!("Welcome to merkle-rs client 🔑🦀!");
 
-    let mut merkle_client = MerkleClient::new(
-        "http://127.0.0.1:3000",
-        reqwest::Client::new(),
-        args.files_path,
-        args.merkle_path,
-    );
+    let args = Args::parse_arguments();
 
-    match merkle_client.upload_all_files_to_server().await {
-        Ok(_) => {
-            println!("Client files sucesfully uploaded!");
+    match &args.command {
+        None => {
+            println!("Please give a valid command");
+            println!("Run with --help to get the list of available commands");
         }
-        Err(e) => {
-            println!("Could not upload files {}", e);
-        }
-    }
+        Some(Commands::Upload {}) => {
+            let mut merkle_client = MerkleClient::new(
+                "http://127.0.0.1:3000",
+                reqwest::Client::new(),
+                Some(args.files_path),
+                args.merkle_path,
+            );
 
-    merkle_client.compute_merkle_root_from_files();
-    if let Err(e) = merkle_client.write_merkle_root_to_disk() {
-        panic!("Failed to write merkle root to disk {}", e);
-    }
+            match merkle_client.upload_all_files_to_server().await {
+                Ok(_) => {
+                    println!("Client files sucesfully uploaded!");
+                }
+                Err(e) => {
+                    println!("Could not upload files {}", e);
+                }
+            }
 
-    if let Err(e) = merkle_client.delete_local_client_files() {
-        panic!("Failed to delete client files {}", e);
-    }
+            merkle_client.compute_merkle_root_from_files();
+            if let Err(e) = merkle_client.write_merkle_root_to_disk() {
+                panic!("Failed to write merkle root to disk {}", e);
+            }
 
-    println!("Requesting file from server");
-
-    let file_to_ask_for = "file1.txt";
-
-    match merkle_client.request_file(file_to_ask_for).await {
-        Ok(server_response) => {
-            if utils::verify_merkle_proof(
-                server_response.merkle_proof,
-                merkle_client.merkle_root.unwrap(),
-                server_response.content,
-            ) {
-                println!("Server proof is valid!");
-            } else {
-                println!("Server proof is invalid!");
+            if let Err(e) = merkle_client.delete_local_client_files() {
+                panic!("Failed to delete client files {}", e);
             }
         }
-        Err(e) => {
-            eprint!("{}", e);
+
+        Some(Commands::Request { file_name }) => {
+            let merkle_client = MerkleClient::new(
+                "http://127.0.0.1:3000",
+                reqwest::Client::new(),
+                None,
+                args.merkle_path,
+            );
+
+            match merkle_client.request_file(file_name).await {
+                Ok(server_response) => {
+                    if utils::verify_merkle_proof(
+                        server_response.merkle_proof,
+                        merkle_client.read_merkle_root_from_disk().unwrap(),
+                        server_response.content,
+                    ) {
+                        println!("Server proof is valid!");
+                    } else {
+                        println!("Server proof is invalid!");
+                    }
+                }
+                Err(e) => {
+                    eprint!("{}", e);
+                }
+            }
         }
     }
 
