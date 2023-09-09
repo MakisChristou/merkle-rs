@@ -7,25 +7,22 @@ use crate::merkle_tree::{NodeOrder, ProofListItem};
 
 pub fn parse_files(path: &str) -> BTreeMap<String, Vec<u8>> {
     let mut files_map = BTreeMap::new();
-
     let entries = fs::read_dir(path).expect("Failed to read directory");
 
-    for entry in entries {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_file() {
-                // Extract the file name.
-                if let Some(file_name) = path.file_name() {
-                    if let Some(file_name_str) = file_name.to_str() {
-                        // Read the file contents.
-                        let mut file = fs::File::open(&path).expect("Failed to open file");
-                        let mut content = Vec::new();
-                        file.read_to_end(&mut content)
-                            .expect("Failed to read file contents");
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file() {
+            // Extract the file name.
+            if let Some(file_name) = path.file_name() {
+                if let Some(file_name_str) = file_name.to_str() {
+                    // Read the file contents.
+                    let mut file = fs::File::open(&path).expect("Failed to open file");
+                    let mut content = Vec::new();
+                    file.read_to_end(&mut content)
+                        .expect("Failed to read file contents");
 
-                        // Insert into the BTreeMap.
-                        files_map.insert(file_name_str.to_string(), content);
-                    }
+                    // Insert into the BTreeMap.
+                    files_map.insert(file_name_str.to_string(), content);
                 }
             }
         }
@@ -66,5 +63,5 @@ pub fn verify_merkle_proof(mut proof_list: Vec<ProofListItem>, markle_root: Vec<
         }
     }
 
-    return markle_root == proof_list.pop().unwrap().hash;
+    markle_root == proof_list.pop().unwrap().hash
 }

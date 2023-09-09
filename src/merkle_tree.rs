@@ -49,7 +49,7 @@ impl MerkleNode {
 
     pub fn combine(left: &MerkleNode, right: &MerkleNode) -> Self {
         let combined = [&left.hash[..], &right.hash[..]].concat();
-        let hash = Sha256::digest(&combined).to_vec();
+        let hash = Sha256::digest(combined).to_vec();
         MerkleNode {
             hash,
             left: Some(Rc::new(left.clone())),
@@ -63,7 +63,6 @@ pub struct MerkleTree {
     pub root: MerkleNode,
 }
 
-use hex;
 use std::fmt;
 
 use crate::utils;
@@ -203,23 +202,23 @@ impl MerkleTree {
         node: &MerkleNode,
         target_hash: &Vec<u8>,
     ) -> Option<NodeOrder> {
-        if self.is_node_in_subtree(&node.left, target_hash) {
-            return Some(NodeOrder::Left);
-        } else if self.is_node_in_subtree(&node.right, target_hash) {
-            return Some(NodeOrder::Right);
+        if MerkleTree::is_node_in_subtree(&node.left, target_hash) {
+            Some(NodeOrder::Left)
+        } else if MerkleTree::is_node_in_subtree(&node.right, target_hash) {
+            Some(NodeOrder::Right)
         } else {
-            return None;
+            None
         }
     }
 
-    fn is_node_in_subtree(&self, node: &Option<Rc<MerkleNode>>, target_hash: &Vec<u8>) -> bool {
+    fn is_node_in_subtree(node: &Option<Rc<MerkleNode>>, target_hash: &Vec<u8>) -> bool {
         match node {
             Some(n) => {
                 if &n.hash == target_hash {
                     return true;
                 }
-                self.is_node_in_subtree(&n.left, target_hash)
-                    || self.is_node_in_subtree(&n.right, target_hash)
+                MerkleTree::is_node_in_subtree(&n.left, target_hash)
+                    || MerkleTree::is_node_in_subtree(&n.right, target_hash)
             }
             None => false,
         }
