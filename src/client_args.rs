@@ -12,6 +12,10 @@ pub struct Args {
     #[arg(short, long, default_value_t = String::from("merkle.bin"))]
     pub merkle_path: String,
 
+    /// Server IP address
+    #[arg(short, long, default_value_t = String::from("http://127.0.0.1:3000"))]
+    pub server_address: String,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }

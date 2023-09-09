@@ -65,6 +65,16 @@ impl MerkleClient {
         match &self.client_files {
             Some(client_files) => {
                 let base_url = format!("{}/upload", self.server_url);
+
+                let entries: Vec<_> = fs::read_dir(client_files)?.collect();
+                if entries.is_empty() {
+                    eprintln!("The directory is empty!");
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "The directory is empty",
+                    )));
+                }
+
                 let entries = fs::read_dir(client_files)?;
 
                 for entry in entries {
@@ -78,10 +88,10 @@ impl MerkleClient {
                 Ok(())
             }
             None => {
-                eprintln!("Client has no files to upload");
+                eprintln!("Client has no set directory path");
                 Err(Box::new(io::Error::new(
                     io::ErrorKind::Other,
-                    "Client has no files to upload",
+                    "Client has no set directory path",
                 )))
             }
         }
@@ -126,15 +136,29 @@ impl MerkleClient {
         }
     }
 
-    pub fn compute_merkle_root_from_files(&mut self) {
+    pub fn compute_merkle_root_from_files(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         match &self.client_files {
             Some(client_files) => {
                 let files = utils::parse_files(client_files);
-                let merkle_tree = MerkleTree::new(&files);
-                self.merkle_root = Some(merkle_tree.root.hash);
+
+                if files.len() < 2 {
+                    eprintln!("Not enough files to upload, must be > 2");
+                    Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Not enough files to upload, must be > 2",
+                    )))
+                } else {
+                    let merkle_tree = MerkleTree::new(&files);
+                    self.merkle_root = Some(merkle_tree.root.hash);
+                    Ok(())
+                }
             }
             None => {
                 println!("Cannot compute Merkle Proof, no files");
+                Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Cannot compute Merkle Proof, no files",
+                )))
             }
         }
     }
@@ -181,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Some(Commands::Upload {}) => {
             let mut merkle_client = MerkleClient::new(
-                "http://127.0.0.1:3000",
+                &args.server_address,
                 reqwest::Client::new(),
                 Some(args.files_path),
                 args.merkle_path,
@@ -192,11 +216,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Client files sucesfully uploaded!");
                 }
                 Err(e) => {
-                    println!("Could not upload files {}", e);
+                    panic!("Could not upload files {}", e);
                 }
             }
 
-            merkle_client.compute_merkle_root_from_files();
+            if let Err(e) = merkle_client.compute_merkle_root_from_files() {
+                panic!("Failed to compute merkle root from files {}", e);
+            }
+
             if let Err(e) = merkle_client.write_merkle_root_to_disk() {
                 panic!("Failed to write merkle root to disk {}", e);
             }
@@ -208,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Some(Commands::Request { file_name }) => {
             let merkle_client = MerkleClient::new(
-                "http://127.0.0.1:3000",
+                &args.server_address,
                 reqwest::Client::new(),
                 None,
                 args.merkle_path,

@@ -5,6 +5,10 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 pub struct Args {
     /// Path where client files are located
-    #[arg(short, long, default_value_t = String::from("server_files"))]
+    #[arg(long, default_value_t = String::from("server_files"))]
     pub path: String,
+
+    /// Port to listen to
+    #[arg(long, default_value_t = 3000)]
+    pub port: u16,
 }

@@ -4,6 +4,7 @@ use axum::{
     Router,
 };
 use base64::{self, engine::general_purpose, Engine};
+use clap::Parser;
 use hyper::StatusCode;
 use std::{
     fs::{self, create_dir_all, File},
@@ -15,12 +16,18 @@ mod merkle_tree;
 mod server_args;
 mod utils;
 
-use crate::common::{FileResponse, UploadRequest, UploadResponse};
 use crate::merkle_tree::MerkleTree;
+use crate::{
+    common::{FileResponse, UploadRequest, UploadResponse},
+    server_args::Args,
+};
 
-async fn upload(Json(body): Json<UploadRequest>) -> Result<Json<UploadResponse>, StatusCode> {
+async fn upload(
+    directory: String,
+    Json(body): Json<UploadRequest>,
+) -> Result<Json<UploadResponse>, StatusCode> {
     // Create the directory if it doesn't exist
-    let path = std::path::Path::new("server_files");
+    let path = std::path::Path::new(&directory);
     if !path.exists() {
         if let Err(e) = create_dir_all(path) {
             eprintln!("Failed to create directory: {:?}", e);
@@ -75,11 +82,18 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
 
 #[tokio::main]
 async fn main() {
+    let args = Args::parse();
+
+    let directory = args.path;
+
     let app = Router::new()
-        .route("/upload", post(upload))
+        .route(
+            "/upload",
+            post(move |body: Json<UploadRequest>| upload(directory.clone(), body)),
+        )
         .route("/file/:filename", get(request_file));
 
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], args.port));
 
     println!("Welcome to merkle-rs server 🔑🦀!");
     println!("Listening on {}", addr);
