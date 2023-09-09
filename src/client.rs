@@ -2,6 +2,16 @@ use clap::Parser;
 
 use crate::{args::Args, merkle_tree::MerkleTree};
 
+use base64;
+use reqwest;
+use std::fs;
+
+#[derive(serde::Serialize)]
+struct UploadPayload {
+    filename: String,
+    content: String,
+}
+
 mod args;
 mod merkle_tree;
 mod utils;
@@ -16,26 +26,37 @@ impl Client {
     }
 }
 
-fn main() {
-    println!("Hello from client!");
-    let args = Args::parse();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = reqwest::Client::new();
+    let base_url = "http://127.0.0.1:3000/upload";
+    
+    let entries = fs::read_dir("client_files")?;
 
-    let path = &args.path;
-    let files = utils::parse_files(path);
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            let content = fs::read(&path)?;
+            let base64_content = base64::encode(&content);
 
-    let merkle_tree = MerkleTree::new(&files);
+            let payload = UploadPayload {
+                filename: path.file_name().unwrap().to_string_lossy().into_owned(),
+                content: base64_content,
+            };
 
-    println!("\n{}", merkle_tree);
+            let response = client.post(base_url)
+                .json(&payload)
+                .send()
+                .await?;
 
-    match merkle_tree.generate_merkle_proof("backup.db", &files) {
-        Some(proof_list) => {
-            println!(
-                "proof is : {}",
-                utils::verify_merkle_proof(proof_list, merkle_tree.get_root_hash())
-            );
-        }
-        None => {
-            println!("Could not generate proof")
+            if response.status().is_success() {
+                println!("Successfully uploaded: {:?}", path);
+            } else {
+                eprintln!("Failed to upload: {:?}. Status: {}", path, response.status());
+            }
         }
     }
+
+    Ok(())
 }
