@@ -50,13 +50,13 @@ Options:
   -V, --version      Print version
 ```
 
-Running the server with default options
+Running the server with default options (stick to this option for simplicity)
 
 ```bash
 $ cargo r --bin server
 ```
 
-Running the server with custom options
+Or with custom options
 
 
 ```bash
@@ -98,11 +98,33 @@ Options:
 We can run the client with the default options as seen below. Since the client requires a command to function, running it without one will print a message and quit.
 
 ```bash
-$ client
+$ cargo r --bin client
 Welcome to merkle-rs client 🔑🦀!
 Please give a valid command
 Run with --help to get the list of available commands
 ```
+
+Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script that can be seen below, which essentially creates 4 textfiles under `client_files`.
+
+```bash
+# Create directory
+mkdir -p client_files
+
+# Use a for loop to create and write data into the files
+for i in {1..4}; do
+    touch client_files/file$i.txt
+    echo "This is some data for client_files/file$i.txt" >> client_files/file$i.txt
+done
+```
+
+We can run it like so
+
+```bash
+./gen_files.sh
+```
+
+Note that the client/server code works for arbitrary files meaning of any type.
+
 
 Assuming that the server is running on `http://localhost:3000` we can upload to it upload all files of `./client_files`, compute and store the merkle root of the files as a binary file in `./merkle.bin` as well as delete the local copies using the following command:
 
@@ -110,7 +132,7 @@ Assuming that the server is running on `http://localhost:3000` we can upload to 
 $ cargo r --bin client upload
 ```
 
-Or we can use custom options like so:
+Or with custom options like so:
 
 ```bash
 $ cargo r --bin client -- --files-path="/path/to/client/files" --merkle-path="/path/to/merkle.bin" --server-address="http://example.com" upload
@@ -119,17 +141,17 @@ $ cargo r --bin client -- --files-path="/path/to/client/files" --merkle-path="/p
 If the above step was succesful we can request a file from the server and verify its integity. Assuming we had a file called `file1.txt` under `client_files` we can request it alongside its proof like so:
 
 ```bash
-$ client request "file1.txt"
+$ cargo r --bin client -- request "file1.txt"
 ```
 
 # Limitations/Shortcomings
 - Files and their content are stored in RAM when constructing the Merkle Tree (impractical for larger files)
-- Cannot incrementally send files, its a single operation for all files and then we cannot incrementally add more.
+- Cannot incrementally upload files
 - If a new set of files is sent Merkle Tree should be re-created from scratch
-- No user authentication, anyone can request or upload a file to the server (no multiple users support)
+- No user authentication, anyone can request or upload a file from/to the server
 - Files are sent in plain-text
 - Client can only upload all of its files found under a single directory (no granular control)
-- Client cannot delete or update files on server
+- Client cannot delete or update files on server (No complete CRUD operations)
 - When client receives a file's content it just verifies it and quits. Doesn't store it on disk.
 
 # Future work
