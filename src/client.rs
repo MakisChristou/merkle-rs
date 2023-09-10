@@ -25,6 +25,8 @@ pub struct MerkleClient {
     merkle_root_path: String,
 }
 
+static NO_DIR_MSG: &str = "Client has no set directory path";
+
 impl MerkleClient {
     pub fn new(
         server_url: &str,
@@ -94,11 +96,8 @@ impl MerkleClient {
                 Ok(())
             }
             None => {
-                eprintln!("Client has no set directory path");
-                Err(Box::new(io::Error::new(
-                    io::ErrorKind::Other,
-                    "Client has no set directory path",
-                )))
+                eprintln!("{}", NO_DIR_MSG);
+                Err(Box::new(io::Error::new(io::ErrorKind::Other, NO_DIR_MSG)))
             }
         }
     }
@@ -136,11 +135,8 @@ impl MerkleClient {
                 Ok(())
             }
             None => {
-                eprintln!("Client has no set directory path");
-                Err(io::Error::new(
-                    ErrorKind::Other,
-                    "Client has no set directory path",
-                ))
+                eprintln!("{}", NO_DIR_MSG);
+                Err(io::Error::new(ErrorKind::Other, NO_DIR_MSG))
             }
         }
     }
@@ -163,10 +159,10 @@ impl MerkleClient {
                 }
             }
             None => {
-                println!("Client has no set directory path");
+                eprintln!("{}", NO_DIR_MSG);
                 Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    "Client has no set directory path",
+                    NO_DIR_MSG,
                 )))
             }
         }

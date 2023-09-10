@@ -72,7 +72,11 @@ def verify_merkle_proof(proof_list, hashed_file_contents, merkle_root):
 ```
 
 
+# Build
 
+```bash
+$ cargo b
+```
 
 # Run tests 
 
