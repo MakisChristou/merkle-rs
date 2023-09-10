@@ -1,5 +1,5 @@
 # merkle-rs
-A Merkle tree implementation in Rust 🌲🦀! 
+A Merkle Tree implementation in Rust 🌲🦀! 
 
 - Supports merkle proof generation/verification for a set of files
 - Contains 2 networked binaries (a client and a server)
@@ -12,16 +12,16 @@ A [demo](https://youtu.be/j4ec2gLEBbY) of the baremetal version working across d
 
 
 # How it works
-The high level idea of the scheme is that the client has a set of files. It can use a Merkle Tree to compute the merkle root of the files, upload them to a server and then delete its local copies. It can then request any of its files back from the server. The server can provide a proof alongside the file, which can be independenctly verified by the client. The client can be cryptographically convinced that the server has given it a file that
+The high level idea of the scheme is that the client has a set of files. It can use a Merkle Tree to compute the merkle root of the files, upload them to a server and then delete its local copies. It can then request any of its files back from the server. The server can provide a proof alongside the file, which can be independently verified by the client. The client can be cryptographically convinced that the server has given it a file that
 
 1. Was in the initial set sent to the server
 2. Has not been tampered with
 
 ## Merkle Tree
-A Merkle Tree is a data structure that is used to efficienlty summarize a set of data (usually transactions in a blockchain). It is a binary tree where the leaf nodes contain the hashes of the files/transactions that we want to "summarize" and the parent nodes are computed by grouping leaf nodes into two and concatenating their hashes, rehashing them to get a combined hash. That hash is the value of the parent node. We do this recursively until we reach the root node which is the "summary" of the set of data. This enables an efficient way to check if a piece of data that you have the contents of is in this larger set of data (i.e. block in a blockchain context). The bread and butter of Merkle Trees is their efficient Proof generation and verification algoerithms. We will talk about them in the next sections.
+A Merkle Tree is a data structure that is used to efficiently summarize a set of data (usually transactions in a blockchain). It is a binary tree where the leaf nodes contain the hashes of the files/transactions that we want to "summarize" and the parent nodes are computed by grouping leaf nodes into two and concatenating their hashes, rehashing them to get a combined hash. That hash is the value of the parent node. We do this recursively until we reach the root node which is the "summary" of the set of data. This enables an efficient way to check if a piece of data that you have the contents of is in this larger set of data (i.e. block in a blockchain context). The bread and butter of Merkle Trees is their efficient Proof generation and verification algorithms. We will talk about them in the next sections.
 
 ## Merkle Proof Generation Algorithm (server)
-The Merkle Proof generation algorithm can be found in the `generate_merkle_proof` method of `MerkleTree`. The idea behind the algorithm is to start from the root node (`current_node` = `root_of_tree`) of the tree and traverse downards. While doing so we keep a `proof_list` which is a stack that contains the hashes of the required nodes for the proof, alongside their order in the tree (left or right). We set the `current_node`  to the left child if the `target_hash` is found under the left subtree and we push the opposite (i.e. right child) in the `proof_list` alongside its order which in this case is right. We do the exact opposite if the `target_hash` is found in the opposite subtree. We continue this operation until we reach the lead nodes of the tree. A simplified pseudocode of the algorithm can be found below:
+The Merkle Proof generation algorithm can be found in the `generate_merkle_proof` method of `MerkleTree`. The idea behind the algorithm is to start from the root node (`current_node` = `root_of_tree`) of the tree and traverse downwards. While doing so we keep a `proof_list` which is a stack that contains the hashes of the required nodes for the proof, alongside their order in the tree (left or right). We set the `current_node`  to the left child if the `target_hash` is found under the left subtree and we push the opposite (i.e. right child) in the `proof_list` alongside its order which in this case is right. We do the exact opposite if the `target_hash` is found in the opposite subtree. We continue this operation until we reach the leaf nodes of the tree. A simplified pseudocode of the algorithm can be found below:
 
 ```python
 def generate_merkle_proof(target_hash, root_of_tree):
@@ -43,7 +43,7 @@ def generate_merkle_proof(target_hash, root_of_tree):
 The `proof_list` alongside the contents of the file are what the verification algorithm needs to check if the given file is in the Merkle Tree.
 
 ## Merkle Proof Verification Algorithm (client)
-I have chosen to implement the verification algorithm as a helper method in the `utils` module since it should be independent of the actual tree. Spefically the implementation is in the `utils::verify_merkle_proof` function. The verification algorithm is relatively simpler. Firstly there are some quick ways to dismiss an invalid proof such as checking if the `proof_list` is empty or below a given size, and then checking if the hashed contents of the file are included in any of the nodes in the `proof_list`. If that is the case, all the verifier has to do is pop items from the `proof_list`, specificslly 2 at a time, concatenate their hashes in the correct order, which is included in each item in the proof list and generate a new node which is to be pushed back to the stack. It then repeats this process until the stack size is 1. If the result is equal to the merkle tree's root hash then the verification is sucessful. A simplified pseudocode of the algorithm can be found below:
+I have chosen to implement the verification algorithm as a helper method in the `utils` module since it should be independent of the actual tree. Spefically the implementation is in the `utils::verify_merkle_proof` function. The verification algorithm is relatively simpler. Firstly there are some quick ways to dismiss an invalid proof such as checking if the `proof_list` is empty or below a given size, and then checking if the hashed contents of the file are included in any of the nodes in the `proof_list`. If that is the case, all the verifier has to do is pop items from the `proof_list`, specifically 2 at a time, concatenate their hashes in the correct order, which is included in each item in the proof list and generate a new node which is to be pushed back to the stack. It then repeats this process until the stack size is 1. If the result is equal to the merkle tree's root hash then the verification is successful. A simplified pseudocode of the algorithm can be found below:
 
 ```python
 def verify_merkle_proof(proof_list, hashed_file_contents, merkle_root):
@@ -87,7 +87,7 @@ The server has 2 main configuration options. The port which it listens to as wel
 
 ```bash
 $ cargo r --bin server -- --help
-A Merkle tree implementation for proving file integrity
+A Merkle Tree implementation for proving file integrity
 
 Usage: server [OPTIONS]
 
@@ -104,7 +104,7 @@ The client has multiple configuration options. For instance we can choose the pa
 
 ```bash
 $ client --help
-A Merkle tree implementation for proving file integrity
+A Merkle Tree implementation for proving file integrity
 
 Usage: client [OPTIONS] [COMMAND]
 
@@ -133,13 +133,13 @@ Before running our first client command we need to create some files locally on 
 ./gen_files.sh 10000
 ```
 
-Start the server container with on port 3000
+Start the server container on port 3000
 
 ```bash
 docker-compose run server cargo r --release --bin server -- --port 3000
 ```
 
-Once the server is built and up and running start the client with the upload command. This will upload the generated files of our helper script to the server, generate a merkle proof and store it under `merkle.bin` and then delete all of the client files.
+Once the server is built and up and running start the client with the upload command. This will upload the generated files of our helper script to the server, generate a merkle tree and store it's root under `merkle.bin` and then delete all of the client files.
 
 ```bash
 docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" upload

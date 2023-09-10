@@ -1,6 +1,6 @@
 use clap::Parser;
 
-/// A Merkle tree implementation for proving file integrity.
+/// A Merkle Tree implementation for proving file integrity.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
