@@ -8,7 +8,7 @@ A Merkle Tree implementation in Rust 🌲🦀!
 - Works with any file type
 - Proof generation < 2 seconds on M2 Macbook pro for 100k small files
 
-A [demo](https://youtu.be/j4ec2gLEBbY) of the baremetal version working across different machines.
+A [demo](https://youtu.be/j4ec2gLEBbY) of the bare-metal version working across different machines.
 
 
 # How it works
@@ -152,18 +152,22 @@ Then we can request a specific file with its proof from the server
 docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" request "file1.txt"
 ```
 
+# Run bare-metal
+To run the code normally just run the same commands as shown in the docker section but ommit anything before `cargo`.
+
+
 # Limitations/Shortcomings
 - Files and their content are stored in RAM when constructing the Merkle Tree (impractical for larger files)
-- Cannot incrementally upload files
-- If a new set of files is sent Merkle Tree should be re-created from scratch
 - No user authentication, anyone can request or upload a file from/to the server
 - Files are sent in plain-text
 - Client can only upload all of its files found under a single directory (no granular control)
 - Client cannot delete or update files on server (No complete CRUD operations)
-- When client receives a file's content it just verifies it and quits. Doesn't store it on disk.
-- Files are sent one-by-one should implement batch sending
+- When client receives a file's content it just verifies it and quits. Doesn't store it on disk or do anything interesting.
+- Files are sent one-by-one should implement batch sending for efficiency
 
 # Future work
 - Add user authentication (at least a password in the request)
-- Send files encrypted (e.g. https)
-- Support CRUD operations (maybe this will require the client storing and updating the merkle tree on disk)
+- Send files encrypted instead of plain-text (use https instead of http)
+- Support all CRUD operations (this will require the client storing and updating the merkle tree on disk instead of just the root)
+- Error handling could be improved
+- Add more thorough tests for client and server
