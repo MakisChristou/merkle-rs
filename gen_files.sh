@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Create directory
 mkdir -p client_files
 

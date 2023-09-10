@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server_files:/usr/src/merkle-rs/server_files
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    depends_on:
+      - server
+    volumes:
+      - ./client_files:/usr/src/merkle-rs/client_files
+      - ./:/usr/src/merkle-rs

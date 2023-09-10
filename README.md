@@ -60,7 +60,33 @@ FUNCTION generate_merkle_proof(proof_list, hashed_file_contents, merkle_root):
 ```
 
 
-# How to run
+# Running using Docker
+Run the helper script to generate some client files
+```bash
+./gen_files.sh
+```
+
+Start the server container
+
+```bash
+docker-compose up server
+```
+
+Once the server is built and up and running start the client with the upload command. This will upload the generated files of our helper script to the server, generate a merkle proof and store it under `merkle.bin` and then delete all of the client files.
+
+```bash
+docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" upload
+```
+
+Then we can request a specific file with its proof from the server
+
+
+```bash
+docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" request "file1.txt"
+```
+
+
+# Running Baremetal
 Building both the client and the server
 
 ```bash
@@ -151,18 +177,7 @@ Please give a valid command
 Run with --help to get the list of available commands
 ```
 
-Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script that can be seen below, which essentially creates 4 textfiles under `client_files`.
-
-```bash
-# Create directory
-mkdir -p client_files
-
-# Use a for loop to create and write data into the files
-for i in {1..4}; do
-    touch client_files/file$i.txt
-    echo "This is some data for client_files/file$i.txt" >> client_files/file$i.txt
-done
-```
+Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script to do just that, which essentially creates 4 textfiles under `client_files`.
 
 We can run it like so
 

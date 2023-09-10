@@ -1,0 +1,14 @@
+# Use an official Rust runtime as a parent image
+FROM rust:1.71
+
+# Set the working directory in the container
+WORKDIR /usr/src/merkle-rs
+
+# Copy the current directory contents into the container
+COPY . .
+
+# Build the Rust application in release mode
+RUN cargo b --release
+
+# The command to run the client binary
+CMD ["./target/release/client"]
