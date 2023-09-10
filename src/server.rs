@@ -56,10 +56,11 @@ async fn upload(
     }))
 }
 
-async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>, StatusCode> {
-    let file_path = format!("server_files/{}", filename);
-
-    let path = "server_files";
+async fn request_file(
+    directory: String,
+    Path(filename): Path<String>,
+) -> Result<Json<FileResponse>, StatusCode> {
+    let file_path = format!("{}/{}", directory, filename);
 
     let content = match fs::read(file_path) {
         Ok(content) => content,
@@ -69,7 +70,7 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
         }
     };
 
-    let files = utils::parse_files(path);
+    let files = utils::parse_files(&directory);
     let merkle_tree = MerkleTree::new(&files);
 
     match merkle_tree.generate_merkle_proof(&filename, &files) {
@@ -84,14 +85,18 @@ async fn request_file(Path(filename): Path<String>) -> Result<Json<FileResponse>
 async fn main() {
     let args = Args::parse();
 
-    let directory = args.path;
+    let directory1 = args.path.clone();
+    let directory2 = args.path;
 
     let app = Router::new()
         .route(
             "/upload",
-            post(move |body: Json<UploadRequest>| upload(directory.clone(), body)),
+            post(move |body: Json<UploadRequest>| upload(directory1, body)),
         )
-        .route("/file/:filename", get(request_file));
+        .route(
+            "/file/:filename",
+            get(move |filename: Path<String>| request_file(directory2, filename)),
+        );
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], args.port));
 
