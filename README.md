@@ -5,6 +5,7 @@ A Merkle tree implementation in Rust 🌲🦀!
 - Contains 2 networked binaries (a client and a server)
 - Server API supports uploading and requesting files alongside their Merkle Proofs
 - Configurable ports, directories for storing files and proofs
+- Works with any file type
 
 # How it works
 
