@@ -63,54 +63,17 @@ def verify_merkle_proof(proof_list, hashed_file_contents, merkle_root):
 ```
 
 
-# Running using Docker
-Run the helper script to generate some client files
-```bash
-./gen_files.sh
-```
-
-Start the server container
-
-```bash
-docker-compose up server
-```
-
-Once the server is built and up and running start the client with the upload command. This will upload the generated files of our helper script to the server, generate a merkle proof and store it under `merkle.bin` and then delete all of the client files.
-
-```bash
-docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" upload
-```
-
-Then we can request a specific file with its proof from the server
 
 
-```bash
-docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" request "file1.txt"
-```
-
-
-<!-- # Running Baremetal
-Building both the client and the server
-
-```bash
-$ cargo b
-```
-
-Running all tests 
+# Run tests 
 
 ```bash
 $ cargo t
 ```
 
-# Server
-This will start the server on port 3000 and with the default directory for server files which is `./server_files`.
+# Command Line Arguments
 
-```bash
-$ cargo r --bin server
-```
-
-## Available Commands
-
+## Server Arguments
 The server has 2 main configuration options. The port which it listens to as well as the path on disk where the client uploaded files will be stored. The default options are port 3000 and the directory `./server_files`.
 
 ```bash
@@ -126,23 +89,7 @@ Options:
   -V, --version      Print version
 ```
 
-Running the server with default options (stick to this option for simplicity)
-
-```bash
-$ cargo r --bin server
-```
-
-Or with custom options
-
-
-```bash
-$ cargo r --bin server -- --port 8081 --path="/path/to/server/files"
-```
-
-
-# Client
-
-## Available Commands
+## Client Arguments
 The client has multiple configuration options. For instance we can choose the path of the directory where the files will be uploaded from and deleted, the path of the merkle root and the server address and port.
 
 
@@ -170,44 +117,31 @@ Options:
           Print version
 ```
 
-
-We can run the client with the default options as seen below. Since the client requires a command to function, running it without one will print a message and quit.
-
-```bash
-$ cargo r --bin client
-Welcome to merkle-rs client 🔑🦀!
-Please give a valid command
-Run with --help to get the list of available commands
-```
-
-Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script to do just that, which essentially creates 4 textfiles under `client_files`.
-
-We can run it like so
+# Run using Docker
+Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script to do just that, which essentially creates 4 text files under `client_files`.
 
 ```bash
 ./gen_files.sh
 ```
 
-Note that the client/server code works for arbitrary files meaning of any type.
-
-
-Assuming that the server is running on `http://localhost:3000` we can upload to it upload all files of `./client_files`, compute and store the merkle root of the files as a binary file in `./merkle.bin` as well as delete the local copies using the following command:
+Start the server container with on port 3000
 
 ```bash
-$ cargo r --bin client upload
+docker-compose run server cargo r --release --bin server -- --port 3000
 ```
 
-Or with custom options like so:
+Once the server is built and up and running start the client with the upload command. This will upload the generated files of our helper script to the server, generate a merkle proof and store it under `merkle.bin` and then delete all of the client files.
 
 ```bash
-$ cargo r --bin client -- --files-path="/path/to/client/files" --merkle-path="/path/to/merkle.bin" --server-address="http://example.com" upload
+docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" upload
 ```
 
-If the above step was succesful we can request a file from the server and verify its integity. Assuming we had a file called `file1.txt` under `client_files` we can request it alongside its proof like so:
+Then we can request a specific file with its proof from the server
+
 
 ```bash
-$ cargo r --bin client -- request "file1.txt"
-``` -->
+docker-compose run client cargo r --release --bin client -- --server-address="http://server:3000" request "file1.txt"
+```
 
 # Limitations/Shortcomings
 - Files and their content are stored in RAM when constructing the Merkle Tree (impractical for larger files)
