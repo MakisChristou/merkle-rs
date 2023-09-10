@@ -6,6 +6,7 @@ A Merkle tree implementation in Rust 🌲🦀!
 - Server API supports uploading and requesting files alongside their Merkle Proofs
 - Configurable ports, directories for storing files and proofs
 - Works with any file type
+- Proof generation < 2 seconds on M2 Macbook pro for 100k small files
 
 # How it works
 
@@ -119,10 +120,10 @@ Options:
 ```
 
 # Run using Docker
-Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script to do just that, which essentially creates 4 text files under `client_files`.
+Before running our first client command we need to create some files locally on the machine where the client is running. For simplicity we can create a new folder called `client_files` and add some simple text files in there for example's sake. I have added a helper script to do just that, which essentially creates a number of text files which is given as a cli argument under `client_files`.
 
 ```bash
-./gen_files.sh
+./gen_files.sh 10000
 ```
 
 Start the server container with on port 3000
@@ -153,6 +154,7 @@ docker-compose run client cargo r --release --bin client -- --server-address="ht
 - Client can only upload all of its files found under a single directory (no granular control)
 - Client cannot delete or update files on server (No complete CRUD operations)
 - When client receives a file's content it just verifies it and quits. Doesn't store it on disk.
+- Files are sent one-by-one should implement batch sending
 
 # Future work
 - Add user authentication (at least a password in the request)
