@@ -8,6 +8,9 @@ A Merkle tree implementation in Rust 🌲🦀!
 - Works with any file type
 - Proof generation < 2 seconds on M2 Macbook pro for 100k small files
 
+A [demo](https://youtu.be/j4ec2gLEBbY) of the baremetal version working across different machines.
+
+
 # How it works
 
 ## Merkle Tree
