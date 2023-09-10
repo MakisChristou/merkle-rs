@@ -250,17 +250,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             match merkle_client.request_file(file_name).await {
-                Ok(server_response) => {
-                    if utils::verify_merkle_proof(
-                        server_response.merkle_proof,
-                        merkle_client.read_merkle_root_from_disk().unwrap(),
-                        server_response.content,
-                    ) {
-                        println!("Server proof is valid!");
-                    } else {
-                        println!("Server proof is invalid!");
+                Ok(server_response) => match merkle_client.read_merkle_root_from_disk() {
+                    Ok(client_merkle_root) => {
+                        if utils::verify_merkle_proof(
+                            server_response.merkle_proof,
+                            client_merkle_root,
+                            server_response.content,
+                        ) {
+                            println!("Server proof is valid!");
+                        } else {
+                            eprintln!("Server proof is invalid!");
+                        }
                     }
-                }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
+                },
                 Err(e) => {
                     eprint!("{}", e);
                 }

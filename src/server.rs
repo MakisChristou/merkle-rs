@@ -93,7 +93,7 @@ async fn main() {
         )
         .route("/file/:filename", get(request_file));
 
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], args.port));
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], args.port));
 
     println!("Welcome to merkle-rs server 🔑🦀!");
     println!("Listening on {}", addr);
