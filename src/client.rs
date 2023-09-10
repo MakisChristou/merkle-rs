@@ -50,7 +50,8 @@ impl MerkleClient {
 
         match response.status() {
             StatusCode::OK => {
-                let file_response: FileResponse = response.json().await?;
+                let response_body = response.text().await?;
+                let file_response: FileResponse = serde_json::from_str(&response_body)?;
                 Ok(file_response)
             }
             _ => Err(Box::new(io::Error::new(
@@ -273,4 +274,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_initialization() {
+        let client = MerkleClient::new(
+            "http://localhost:8000",
+            reqwest::Client::new(),
+            Some("path/to/files".to_owned()),
+            "path/to/merkle_root".to_owned(),
+        );
+        assert_eq!(client.server_url, "http://localhost:8000");
+        assert_eq!(client.client_files, Some("path/to/files".to_owned()));
+        assert_eq!(client.merkle_root_path, "path/to/merkle_root".to_owned());
+    }
+
+    #[test]
+    fn test_read_write_merkle_root() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let merkle_path = temp_dir.path().join("merkle_root");
+        let mut client = MerkleClient::new(
+            "http://localhost:8000",
+            reqwest::Client::new(),
+            Some("path/to/files".to_owned()),
+            merkle_path.to_str().unwrap().to_string(),
+        );
+
+        client.merkle_root = Some(vec![1, 2, 3, 4]);
+        let write_result = client.write_merkle_root_to_disk();
+        assert!(write_result.is_ok());
+
+        let read_result = client.read_merkle_root_from_disk().unwrap();
+        assert_eq!(read_result, vec![1, 2, 3, 4]);
+    }
 }
