@@ -1,9 +1,10 @@
 # merkle-rs
 A Merkle tree implementation in Rust 🌲🦀! 
 
-- Supports merkle proof generation/verification
+- Supports merkle proof generation/verification for a set of files
 - Contains 2 networked binaries (a client and a server)
 - Server API supports uploading and requesting files alongside their Merkle Proofs
+- Configurable ports, directories for storing files and proofs
 
 # How it works
 
@@ -13,50 +14,52 @@ A Merkle Tree is a data structure that is used to efficienlty summarize a set of
 ## Merkle Proof Generation Algorithm (server)
 The Merkle Proof generation algorithm can be found in the `generate_merkle_proof` method of `MerkleTree`. The idea behind the algorithm is to start from the root node (`current_node` = `root_of_tree`) of the tree and traverse downards. While doing so we keep a `proof_list` which is a stack that contains the hashes of the required nodes for the proof, alongside their order in the tree (left or right). We set the `current_node`  to the left child if the `target_hash` is found under the left subtree and we push the opposite (i.e. right child) in the `proof_list` alongside its order which in this case is right. We do the exact opposite if the `target_hash` is found in the opposite subtree. We continue this operation until we reach the lead nodes of the tree. A simplified pseudocode of the algorithm can be found below:
 
-```pseudocode
-FUNCTION generate_merkle_proof(target_hash):
-    DECLARE proof_list AS EMPTY STACK
-    SET current_node TO root_of_tree
+```python
+def generate_merkle_proof(target_hash, root_of_tree):
+    proof_list = []
+    current_node = root_of_tree
 
-    WHILE current_node IS NOT A LEAF:
-        IF target_hash IS IN LEFT SUBTREE OF current_node:
-            PUSH (current_node.RIGHT_CHILD.HASH, "right") TO proof_list
-            SET current_node TO current_node.LEFT_CHILD
-        ELSE:
-            PUSH (current_node.LEFT_CHILD.HASH, "left") TO proof_list
-            SET current_node TO current_node.RIGHT_CHILD
+    while not current_node.is_leaf():
+        if target_hash in current_node.left_subtree():
+            proof_list.push((current_node.right_child.hash, "right"))
+            current_node = current_node.left_child
+        else:
+            proof_list.push((current_node.left_child.hash, "left"))
+            current_node = current_node.right_child
 
-    RETURN proof_list
+    return proof_list
+
 ```
 
 The `proof_list` alongside the contents of the file are what the verification algorithm needs to check if the given file is in the Merkle Tree.
 
 ## Merkle Proof Verification Algorithm (client)
-I have chosen to implement the verification algorithm as a helper method in the `utils` module since it should be independent of the actual tree. Spefically the implementation is in the `utils::verify_merkle_proof` function. The verification algorithm is relatively simpler. Firstly there are some quick ways to dismiss an invalid proof such as checking if the `proof_list` is empty or below a given size, and then checking if the hashed contents of the file are included in any of the nodes in the `proof_list`. If that is the case, all the verifier has to do is pop items from the `proof_list`, specificslly 2 at a time, concatenate their hashes in the correct order, which is included in each item in the proof list and generate a new node which is to be pushed back to the stack. It then repeats this process until the stack size is 1. If the result is equal to the merkle tree's root hash then the verification is sucessful.
+I have chosen to implement the verification algorithm as a helper method in the `utils` module since it should be independent of the actual tree. Spefically the implementation is in the `utils::verify_merkle_proof` function. The verification algorithm is relatively simpler. Firstly there are some quick ways to dismiss an invalid proof such as checking if the `proof_list` is empty or below a given size, and then checking if the hashed contents of the file are included in any of the nodes in the `proof_list`. If that is the case, all the verifier has to do is pop items from the `proof_list`, specificslly 2 at a time, concatenate their hashes in the correct order, which is included in each item in the proof list and generate a new node which is to be pushed back to the stack. It then repeats this process until the stack size is 1. If the result is equal to the merkle tree's root hash then the verification is sucessful. A simplified pseudocode of the algorithm can be found below:
 
-```pseudocode
-FUNCTION generate_merkle_proof(proof_list, hashed_file_contents, merkle_root):
-    IF proof_list IS EMPTY OR SIZE OF proof_list IS BELOW A GIVEN THRESHOLD:
-        RETURN FALSE
+```python
+def verify_merkle_proof(proof_list, hashed_file_contents, merkle_root):
+    if not proof_list or len(proof_list) < THRESHOLD:
+        return False
 
-    IF hashed_file_contents IS NOT IN ANY NODE OF proof_list:
-        RETURN FALSE
+    if hashed_file_contents not in [node.hash for node in proof_list]:
+        return False
 
-    WHILE SIZE OF proof_list > 1:
-        item1 = POP proof_list
-        item2 = POP proof_list
+    while len(proof_list) > 1:
+        item1 = proof_list.pop()
+        item2 = proof_list.pop()
 
-        IF item1.ORDER IS "left":
-            concatenated_hash = HASH(item1.HASH + item2.HASH)
-        ELSE:
-            concatenated_hash = HASH(item2.HASH + item1.HASH)
+        if item1.order == "left":
+            concatenated_hash = hash_function(item1.hash + item2.hash)
+        else:
+            concatenated_hash = hash_function(item2.hash + item1.hash)
 
-        PUSH concatenated_hash TO proof_list
+        proof_list.push(concatenated_hash)
 
-    IF SIZE OF proof_list IS 1 AND proof_list.TOP IS EQUAL TO merkle_root:
-        RETURN TRUE
-    ELSE:
-        RETURN FALSE
+    if len(proof_list) == 1 and proof_list[0] == merkle_root:
+        return True
+    else:
+        return False
+
 ```
 
 
@@ -86,7 +89,7 @@ docker-compose run client cargo r --release --bin client -- --server-address="ht
 ```
 
 
-# Running Baremetal
+<!-- # Running Baremetal
 Building both the client and the server
 
 ```bash
@@ -204,7 +207,7 @@ If the above step was succesful we can request a file from the server and verify
 
 ```bash
 $ cargo r --bin client -- request "file1.txt"
-```
+``` -->
 
 # Limitations/Shortcomings
 - Files and their content are stored in RAM when constructing the Merkle Tree (impractical for larger files)
