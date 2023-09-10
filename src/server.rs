@@ -65,7 +65,7 @@ async fn request_file(
     let content = match fs::read(file_path) {
         Ok(content) => content,
         Err(e) => {
-            eprintln!("Failed to read file {}: {:?}", filename, e);
+            eprintln!("Failed to read file {}/{}: {:?}", directory, filename, e);
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };
@@ -76,7 +76,11 @@ async fn request_file(
     match merkle_tree.generate_merkle_proof(&filename, &files) {
         Some(proof_list) => Ok(Json(FileResponse::new(filename, content, proof_list))),
         None => {
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            eprintln!(
+                "Failed to generate merkle proof for {}/{}",
+                directory, filename
+            );
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
@@ -85,17 +89,22 @@ async fn request_file(
 async fn main() {
     let args = Args::parse();
 
-    let directory1 = args.path.clone();
-    let directory2 = args.path;
+    let directory = args.path;
 
     let app = Router::new()
         .route(
             "/upload",
-            post(move |body: Json<UploadRequest>| upload(directory1, body)),
+            post({
+                let directory = directory.clone();
+                move |body: Json<UploadRequest>| upload(directory.clone(), body)
+            }),
         )
         .route(
             "/file/:filename",
-            get(move |filename: Path<String>| request_file(directory2, filename)),
+            get({
+                let directory = directory.clone();
+                move |filename: Path<String>| request_file(directory.clone(), filename)
+            }),
         );
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], args.port));
@@ -107,4 +116,83 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .expect("Server failed to start");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyper::{Body, Request};
+    use tempfile::tempdir;
+    use tokio_test::block_on;
+
+    impl UploadRequest {
+        pub fn from_req(req: Request<Body>) -> Result<Self, StatusCode> {
+            let bytes = block_on(hyper::body::to_bytes(req.into_body())).unwrap();
+            let body_str = String::from_utf8(bytes.to_vec()).unwrap();
+            serde_json::from_str(&body_str).map_err(|_| StatusCode::BAD_REQUEST)
+        }
+    }
+
+    fn mock_upload_request(content: &str, filename: &str) -> Request<Body> {
+        let body = UploadRequest {
+            content: content.to_string(),
+            filename: filename.to_string(),
+        };
+        let body = serde_json::to_string(&body).unwrap();
+        Request::builder()
+            .method("POST")
+            .uri("/upload")
+            .header("content-type", "application/json")
+            .body(Body::from(body))
+            .unwrap()
+    }
+
+    fn upload_two_files(directory: String) {
+        let req = mock_upload_request("SGVsbG8gV29ybGQ=", "hello1.txt");
+        let _ = block_on(upload(
+            directory.clone(),
+            Json(UploadRequest::from_req(req).unwrap()),
+        ));
+
+        let req = mock_upload_request("SGVsbG8gV29ybGQ=", "hello2.txt");
+        let _: Result<Json<UploadResponse>, StatusCode> = block_on(upload(
+            directory,
+            Json(UploadRequest::from_req(req).unwrap()),
+        ));
+    }
+
+    #[test]
+    fn test_upload() {
+        let dir = tempdir().unwrap();
+        let directory = dir.path().to_str().unwrap().to_string();
+        let req = mock_upload_request("SGVsbG8gV29ybGQ=", "hello.txt");
+        let resp = block_on(upload(
+            directory.clone(),
+            Json(UploadRequest::from_req(req).unwrap()),
+        ));
+
+        assert!(resp.is_ok());
+        assert_eq!(
+            resp.unwrap().0.message,
+            "File uploaded succesfully".to_string()
+        );
+    }
+
+    #[test]
+    fn test_request_file() {
+        let dir = tempdir().unwrap();
+        let directory = dir.path().to_str().unwrap().to_string();
+        upload_two_files(directory.clone());
+
+        let filename = "hello1.txt".to_string();
+        let resp = block_on(request_file(directory, Path(filename)));
+
+        assert!(resp.is_ok());
+        let file_response = resp.unwrap().0;
+        assert_eq!(file_response.filename, "hello1.txt".to_string());
+        assert_eq!(
+            file_response.content,
+            vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100]
+        ); // "Hello World" in bytes
+    }
 }

@@ -5,7 +5,6 @@ use crate::{
 use base64::{self, engine::general_purpose, Engine};
 use hyper::StatusCode;
 
-use reqwest;
 use std::{
     fs,
     io::{self, ErrorKind},

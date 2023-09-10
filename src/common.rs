@@ -14,7 +14,7 @@ pub struct UploadResponse {
     pub message: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct FileResponse {
     pub filename: String,
     pub content: Vec<u8>,
