@@ -12,6 +12,10 @@ A [demo](https://youtu.be/j4ec2gLEBbY) of the baremetal version working across d
 
 
 # How it works
+The high level idea of the scheme is that the client has a set of files. It can use a Merkle Tree to compute the merkle root of the files, upload them to a server and then delete its local copies. It can then request any of its files back from the server. The server can provide a proof alongside the file, which can be independenctly verified by the client. The client can be cryptographically convinced that the server has given it a file that
+
+1. Was in the initial set sent to the server
+2. Has not been tampered with
 
 ## Merkle Tree
 A Merkle Tree is a data structure that is used to efficienlty summarize a set of data (usually transactions in a blockchain). It is a binary tree where the leaf nodes contain the hashes of the files/transactions that we want to "summarize" and the parent nodes are computed by grouping leaf nodes into two and concatenating their hashes, rehashing them to get a combined hash. That hash is the value of the parent node. We do this recursively until we reach the root node which is the "summary" of the set of data. This enables an efficient way to check if a piece of data that you have the contents of is in this larger set of data (i.e. block in a blockchain context). The bread and butter of Merkle Trees is their efficient Proof generation and verification algoerithms. We will talk about them in the next sections.
